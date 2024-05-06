@@ -28,12 +28,12 @@ constexpr static Vector2 VEC_RIGHT = {1, 0};
 constexpr static Vector2 VEC_UP = {0, -1};
 constexpr static Vector2 VEC_DOWN = {0, 1};
 struct Fruit {
-  Vector2 at;
+  Vector2 pos;
 
   static Fruit genRand() {
     Fruit out;
-    out.at.x = GetRandomValue(0, MAP_EDGE_LEN - 1);
-    out.at.y = GetRandomValue(0, MAP_EDGE_LEN - 1);
+    out.pos.x = GetRandomValue(0, MAP_EDGE_LEN - 1);
+    out.pos.y = GetRandomValue(0, MAP_EDGE_LEN - 1);
     return out;
   }
 };
@@ -52,9 +52,9 @@ class Game {
   std::vector<Fruit> m_fruits;
   std::list<Segment> m_segments;
 
-  State state = State::Alive;
-  float timer = 0.0f;
-  Vector2 saved_dir = VEC_UP;
+  State m_state = State::Alive;
+  float m_timer = 0.0f;
+  Vector2 m_saved_dir = VEC_UP;
 
 public:
   Game() { InitGame(); }
@@ -71,7 +71,7 @@ public:
     m_fruits.insert(m_fruits.begin(), Fruit::genRand());
     m_fruits.insert(m_fruits.begin(), Fruit::genRand());
 
-    state = State::Alive;
+    m_state = State::Alive;
   }
 
   void Run() {
@@ -79,7 +79,7 @@ public:
       BeginDrawing();
       ClearBackground(RL_BLACK);
 
-      switch (state) {
+      switch (m_state) {
       case State::Alive:
         UpdatePlaying();
         DrawPlaying();
@@ -101,7 +101,7 @@ public:
     // instead of recomputing
     Segment const last_save = m_segments.back();
 
-    m_segments.front().dir = saved_dir;
+    m_segments.front().dir = m_saved_dir;
     Segment prev = m_segments.front();
     for (auto &segment : m_segments) {
       std::swap(segment, prev);
@@ -114,7 +114,7 @@ public:
     if (m_segments.front().pos.x < 0 || m_segments.front().pos.y < 0 ||
         m_segments.front().pos.x >= MAP_EDGE_LEN ||
         m_segments.front().pos.y >= MAP_EDGE_LEN) {
-      state = State::Dead;
+      m_state = State::Dead;
     }
 
     auto const body_collision = std::find_if(
@@ -123,12 +123,12 @@ public:
         });
 
     if (body_collision != m_segments.end()) {
-      state = State::Dead;
+      m_state = State::Dead;
     }
 
     auto const fruit_collision =
         std::find_if(m_fruits.begin(), m_fruits.end(), [this](Fruit fruit) {
-          return Vector2Equals(fruit.at, m_segments.front().pos);
+          return Vector2Equals(fruit.pos, m_segments.front().pos);
         });
 
     if (fruit_collision != m_fruits.end()) {
@@ -144,11 +144,11 @@ public:
         breaking = false;
 
         for (auto const &segment : m_segments)
-          if (Vector2Equals(new_fruit.at, segment.pos))
+          if (Vector2Equals(new_fruit.pos, segment.pos))
             breaking = true;
 
         for (auto const &frui : m_fruits)
-          if (Vector2Equals(new_fruit.at, frui.at))
+          if (Vector2Equals(new_fruit.pos, frui.pos))
             breaking = true;
       }
 
@@ -158,18 +158,18 @@ public:
   void UpdatePlaying() {
     if (IsKeyDown(KEY_LEFT) &&
         !Vector2Equals(m_segments.front().dir, VEC_RIGHT))
-      saved_dir = VEC_LEFT;
+      m_saved_dir = VEC_LEFT;
     if (IsKeyDown(KEY_RIGHT) &&
         !Vector2Equals(m_segments.front().dir, VEC_LEFT))
-      saved_dir = VEC_RIGHT;
+      m_saved_dir = VEC_RIGHT;
     if (IsKeyDown(KEY_UP) && !Vector2Equals(m_segments.front().dir, VEC_DOWN))
-      saved_dir = VEC_UP;
+      m_saved_dir = VEC_UP;
     if (IsKeyDown(KEY_DOWN) && !Vector2Equals(m_segments.front().dir, VEC_UP))
-      saved_dir = VEC_DOWN;
+      m_saved_dir = VEC_DOWN;
 
-    timer += GetFrameTime();
-    if (timer > 0.1f) {
-      timer = 0.0f;
+    m_timer += GetFrameTime();
+    if (m_timer > 0.1f) {
+      m_timer = 0.0f;
       AdvanceSnekk();
     }
 
@@ -180,8 +180,8 @@ public:
   void DrawPlaying() {
     for (auto const fruit : m_fruits) {
       // magic size, 64 x 16
-      DrawRectangle(fruit.at.x * WINDOW_SIZE / MAP_EDGE_LEN + 1,
-                    fruit.at.y * WINDOW_SIZE / MAP_EDGE_LEN + 1,
+      DrawRectangle(fruit.pos.x * WINDOW_SIZE / MAP_EDGE_LEN + 1,
+                    fruit.pos.y * WINDOW_SIZE / MAP_EDGE_LEN + 1,
                     WINDOW_SIZE / MAP_EDGE_LEN + 1,
                     WINDOW_SIZE / MAP_EDGE_LEN + 1, RL_RED);
     }
